@@ -1,0 +1,161 @@
+# GOALS
+# 1. Understand how to run Decision Tree Models in R
+# 2. Understand how to partition and use data in training and testing sets
+# 3. Evaluate model accuracy
+# 4. Learn to compute classification evaluation metrics such as accuracy
+
+
+# OUTPUTS
+
+# 1. The visual representation of your decision tree
+# 2. Prediction accuracy of your model
+
+
+##############
+# DATA SET 1 #
+##############
+
+#Install the package C50, which implements the C5.0 algorithm.
+install.packages("C50")
+library(C50)
+
+#Read the data from the CSV file
+playtennis <- read.csv('play_tennis.csv', stringsAsFactors = TRUE)
+playtennis
+
+#To ensure classification attribute and class label are all in factor (categorical) type please run:
+str(playtennis)
+
+#Since the whole data set is relatively small, we can build the model with all the information.
+
+#Select the columns to use as predictors
+predictors <- c('outlook', 'temp', 'humidity', 'wind')
+
+#Fit the model with our training set
+model <- C5.0(x = playtennis[,predictors], y = playtennis$play)
+
+#Once the model is fit, we can use the summary     command to show the details of the decision tree:
+summary(model)
+
+#We can then visualize the decision tree in a plot
+plot(model)
+
+
+##############
+# CONCLUSION #
+##############
+# From the decision tree we find the rules below:
+
+# (1)	When Outlook is Overcast, we are 100% sure that we should play tennis.
+# (2)	When Outlook is Rain, and Wind is Strong, we are 100% sure that we should NOT play tennis.
+      #However, when Outlook is Rain, and Wind is Weak, we are 100% sure that we should still play tennis.
+# (3)	When Outlook is Sunny, and Humidity is High, we are 100% sure that we should NOT play tennis.
+      #However, when Outlook is still Sunny, but Wind is Normal, we are 100% sure that we should play tennis again.
+
+# From the analysis result, we find Temperature has no impact on prediction. Playing tennis or not is not determined
+# by temperature.
+
+
+
+
+##############
+# DATA SET 2 #
+##############
+
+# The titanic.data data set does contain four categorical attributes for the 2201 people on the Titanic
+
+#   Class: 1st, 2nd, 3rd, crew
+# 	Age: adult, child
+#	  Sex: male, female
+#	  Survive: yes , no
+
+# We will use this Decision Tress to predict whether or not a passenger has survived the sinking based
+# on the other three attributes.
+
+# Load the data
+survive <- read.table('titanic.data', stringsAsFactors = TRUE)
+head(survive)
+
+# To ensure classification attribute and class label are all in factor (categorical) type, run the following:
+str(survive)
+
+# Pre-processing
+# The data is fairly clean. However, we can make our lives easier if we can have correctly labeled columns.
+colnames(survive) <- c('class', 'age', 'sex', 'survive')
+head(survive)
+
+#Partitioning Training and Testing Sets
+#We will fit the model with the training set, and use the test set to evaluate the model.
+#For this lab, we will use 80% of our data for training and 20% for testing (80/20 split)
+
+#Create a sequence of numbers
+seq_len(5)
+
+#Randomly sample three elements from this sequence
+sample(seq_len(5), 3)
+
+
+#Applying the Sampling Method to our Data
+
+# 1.Calculate how many items we need that would make up 80% of the data (sample size)
+# 2. Randomly select 80% of the row numbers (training_index)
+# 3. Create the data frames that have the training data and the test data
+
+# Step 1 - Calculate 80% * rows and round to nearest integer
+sample_size <- floor(0.8 * nrow(survive))
+
+# Step 2 - Get the data frame indices of our random sample
+training_index <- sample(seq_len(nrow(survive)), size = sample_size)
+
+# Step 3a - Get the rows by the index from our sample
+train <- survive[training_index,]
+
+# Step 3b - Get the rows not in the index
+test <- survive[-training_index,]
+
+
+
+#######################
+# DECISION TREES IN R #
+#######################
+
+#Training the Model
+predictors <- c('class', 'age', 'sex')
+
+# Fit the model with our training set
+model <- C5.0.default(x = train[,predictors], y = train$survive)
+summary(model)
+
+#Plot the model
+plot(model)
+
+
+###############
+# CONCLUSSION #
+###############
+
+# From the decision tree we find the rules below:
+# (1)	The most important factor determines whether a passenger survives the sinking is “Sex”.
+      #If a passenger is a Male, he only has 20% of chance surviving.
+# (2)	If a passenger is a female, then consider her room class.
+      # If she is a 1st class, 2nd class passenger, or a crew, she has more than 90% chance surviving.
+# (3)	If a passenger is a female, and is a 3rd class passenger, she only has a little higher than 40% chance surviving.
+
+
+# EVALUATING THE MODEL PERFORMANCE
+# To evaluate, we will apply our model to previously unseen data (the test set).
+# This will give us a vector of predicted values.
+
+pred <- predict(model, newdata = test)
+
+# We can see how well the model performed on the new data. The cbind function joins two or more columns,
+# so we can see our predicted values and our original training data side by side in one table
+evaluation <- cbind(test, pred)
+head(evaluation)
+
+# Compare the actual values to the true values using ifelse
+evaluation$correct <- ifelse(evaluation$survive == evaluation$pred,1,0)
+head(evaluation)
+
+# From this we can compute total prediction accuracy:
+sum(evaluation$correct)/nrow(evaluation)
